@@ -1,11 +1,12 @@
 #include<stdio.h>
 #include<unistd.h>
 #include<stdlib.h>
+#include<sys/wait.h>
 
 
 int main()
 {
-	int pid, pid1, pid2;
+	pid_t pid, pid1, pid2,wpid;
 
 	
 	pid = fork();
@@ -35,7 +36,7 @@ int main()
 			
 			else {
 				
-				sleep(8);//Cannot use wait as parent will continue when any one child terminates
+				while(wpid=wait(NULL)!=-1);//sleep(8);//Cannot use wait as parent will continue when any one child terminates
 				printf("parent --> pid = %d\n", getpid());
 			}
 		}
