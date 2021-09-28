@@ -1,0 +1,80 @@
+1)Why does getpid() return pid_t instead of int?
+What's the logic behind calls like getpid() returning a value of type pid_t instead of an unsigned int? Or int? How does this help?
+I'm guessing this has to do with portability? Guaranteeing that pid_t is the same size across different platforms that may have different sizes of ints etc.?
+
+ANS1:
+I think it's the opposite: making the program portable across platforms, regardless of whether, e.g., a PID is 16 or 32 bits (or even longer).
+ANS2:
+The reason is to allow nasty historical implementations to still be conformant. Suppose your historical implementation had (rather common):
+
+short getpid(void);
+Of course modern systems want pids to be at least 32-bit, but if the standard mandated:
+
+int getpid(void);
+
+then all historical implementations that had used short would become non-conformant. This was deemed unacceptable, so pid_t was created and 
+the implementation was allowed to define pid_t whichever way it prefers.
+
+Note that you are by no means obligated to use pid_t in your own code as long 
+as you use a type that's large enough to store any pid (intmax_t for example would work just fine). 
+The only reason pid_t needs to exist is for the standard to define getpid, waitpid, etc. in terms of it.
+
+2)How to make parent wait for all child processes to finish?
+
+pid_t child_pid, wpid;
+int status = 0;
+
+//Father code (before child processes start)
+
+for (int id=0; id<n; id++) {
+    if ((child_pid = fork()) == 0) {
+        //child code
+        exit(0);
+    }
+}
+
+while ((wpid = wait(&status)) > 0); // this way, the father waits for all the child processes 
+
+//Father code (After all child processes end)
+
+wait waits for a child process to terminate, and returns that child process's pid. On error (eg when there are no child processes), -1 is returned.
+ So, basically, the code keeps waiting for child processes to finish, until the waiting errors out, and then you know they are all finished.
+
+POSIX defines a function: wait(NULL)；. It's the shorthand for waitpid(-1, NULL, 0);, which will suspends the execution of the calling process until any one child process exits.
+ Here, 1st argument of waitpid indicates wait for any child process to end.
+
+
+
+Use waitpid() like this:
+
+pid_t childPid;  // the child process that the execution will soon run inside of. 
+childPid = fork();
+
+if(childPid == 0)  // fork succeeded 
+{   
+   // Do something   
+   exit(0); 
+}
+
+else if(childPid < 0)  // fork failed 
+{    
+   // log the error
+}
+
+else  // Main (parent) process after fork succeeds 
+{    
+    int returnStatus;    
+    waitpid(childPid, &returnStatus, 0);  // Parent process waits here for child to terminate.
+
+    if (returnStatus == 0)  // Verify child process terminated without error.  
+    {
+       printf("The child process terminated normally.");    
+    }
+
+    if (returnStatus == 1)      
+    {
+       printf("The child process terminated with an error!.");    
+    }
+}
+
+
